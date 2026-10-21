@@ -66,7 +66,7 @@ Thymus never deletes anything: remove it by hand, then approve the removal.
 
 `+` new, `~` changed (content hash differs), `-` removed. Removed items are shown but do not make the exit code 1. Colors only when stdout is a terminal (`NO_COLOR` turns them off).
 
-The GIFs are `demo/demo.sh clean` and `demo/demo.sh` (infected): a throwaway fake HOME, a baseline, then a simulated infection with the published Mini Shai-Hulud file layout and inert payloads. Run them yourself, or re-record with `vhs demo/clean.tape` and `vhs demo/infected.tape`. Add `-v` to any thymus command for the detailed view.
+The GIFs come from `source demo/demo.sh`, then `thymus`, `npm install @demo/colors` (a fake npm), `thymus`: a throwaway fake HOME, a baseline, then a simulated infection with the published Mini Shai-Hulud file layout and inert payloads. Run them yourself, or re-record with `vhs demo/clean.tape` and `vhs demo/infected.tape`. Add `-v` to any thymus command for the detailed view.
 
 If it is Shai-Hulud: unload its LaunchAgent first (`launchctl bootout gui/$(id -u)/com.user.gh-token-monitor`), only then revoke GitHub and npm tokens. Its handler is reported to run `rm -rf ~/` when the token stops working ([Wiz](https://www.wiz.io/blog/mini-shai-hulud-strikes-again-tanstack-more-npm-packages-compromised), [JFrog](https://research.jfrog.com/post/shai-hulud-here-we-go-again/), [Intrudify](https://github.com/Intrudify/mini-shai-hulud-scanner)).
 

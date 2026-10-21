@@ -3,12 +3,14 @@ Output demo/infected.gif
 Set Shell bash
 Set FontSize 16
 Set Width 1240
-Set Height 500
+Set Height 440
 Set Padding 24
 Set Theme "Catppuccin Mocha"
 Hide
-Type "export PS1='$ ' && clear" Enter
-Sleep 500ms
+Type "source demo/demo.sh && export PS1='$ ' && clear" Enter
+Sleep 3s
 Show
-Type "./demo/demo.sh" Sleep 300ms Enter
-Sleep 9s
+Type "npm install @demo/colors" Sleep 300ms Enter
+Sleep 2s
+Type "thymus" Sleep 300ms Enter
+Sleep 7s
