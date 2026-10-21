@@ -1,6 +1,12 @@
 # Thymus
 
-![thymus demo: a simulated Mini Shai-Hulud infection caught by thymus diff](demo/demo.gif)
+A normal day:
+
+![thymus on a clean Mac: one line, all clear](demo/clean.gif)
+
+After installing a package that plants Mini Shai-Hulud persistence:
+
+![thymus after a simulated Mini Shai-Hulud infection: six numbered findings](demo/infected.gif)
 
 Learns what "self" looks like on your Mac (every place code can quietly get itself run) and tells you only what is new since then.
 
@@ -34,17 +40,17 @@ thymus: 3 new, 1 changed, 0 removed since 2026-10-20 10:00
 
 launchagents
   + /Users/me/.local/share/.u/node /Users/me/.local/share/.u/index.js [SUSPICIOUS: ad-hoc signed]
-      runs in the background, usually every time you log in
+      runs at every login
       launchagents:user/com.example.helper
       look: plutil -p ~/Library/LaunchAgents/com.example.helper.plist
 
 projects
   + SessionStart hook: node .vscode/setup.mjs
-      runs at every Claude Code session start
+      runs at every Claude session start
       projects:~/Work/acme/web/.claude/settings.json:hook/SessionStart/*/node .vscode/setup.mjs
       look: cat ~/Work/acme/web/.claude/settings.json
   + script in .vscode/: setup.mjs
-      runs when you open or work in this repo
+      runs when you work in this repo
       projects:~/Work/acme/web/.vscode/setup.mjs
       look: cat ~/Work/acme/web/.vscode/setup.mjs
 
@@ -60,7 +66,7 @@ Thymus never deletes anything: remove it by hand, then approve the removal.
 
 `+` new, `~` changed (content hash differs), `-` removed. Removed items are shown but do not make the exit code 1. Colors only when stdout is a terminal (`NO_COLOR` turns them off).
 
-The GIF is `demo/demo.sh`: a throwaway fake HOME, a baseline, then a simulated infection with the published Mini Shai-Hulud file layout and inert `echo` payloads. Run it yourself, or re-record with `vhs demo/demo.tape`.
+The GIFs are `demo/demo.sh clean` and `demo/demo.sh` (infected): a throwaway fake HOME, a baseline, then a simulated infection with the published Mini Shai-Hulud file layout and inert payloads. Run them yourself, or re-record with `vhs demo/clean.tape` and `vhs demo/infected.tape`. Add `-v` to any thymus command for the detailed view.
 
 If it is Shai-Hulud: unload its LaunchAgent first (`launchctl bootout gui/$(id -u)/com.user.gh-token-monitor`), only then revoke GitHub and npm tokens. Its handler is reported to run `rm -rf ~/` when the token stops working ([Wiz](https://www.wiz.io/blog/mini-shai-hulud-strikes-again-tanstack-more-npm-packages-compromised), [JFrog](https://research.jfrog.com/post/shai-hulud-here-we-go-again/), [Intrudify](https://github.com/Intrudify/mini-shai-hulud-scanner)).
 

@@ -11,6 +11,7 @@ import { fileURLToPath } from 'node:url';
 
 const BIN = join(dirname(fileURLToPath(import.meta.url)), '..', 'bin', 'thymus');
 const TOKEN = 'npm_s3cr3tT0kenValue1234567890abcdefXYZ';
+let compact = false;
 
 function plist(label: string, program: string) {
   return `<?xml version="1.0" encoding="UTF-8"?>\n<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">\n<plist version="1.0"><dict><key>Label</key><string>${label}</string><key>ProgramArguments</key><array><string>${program}</string></array></dict></plist>\n`;
@@ -28,7 +29,7 @@ function fakeHome(init = true) {
   put(home, '.claude/settings.json', JSON.stringify({ hooks: {} }));
   put(home, '.npmrc', `registry=https://registry.npmjs.org/\n//registry.npmjs.org/:_authToken=${TOKEN}\n`);
   const cli = (...args: string[]) => {
-    const r = spawnSync(process.execPath, [BIN, ...args], { env: { ...process.env, HOME: home, THYMUS_HOME: join(home, '.thymus') }, encoding: 'utf8' });
+    const r = spawnSync(process.execPath, [BIN, ...args], { env: { ...process.env, HOME: home, THYMUS_HOME: join(home, '.thymus'), THYMUS_VERBOSE: compact ? '' : '1' }, encoding: 'utf8' });
     return { code: r.status, out: r.stdout + r.stderr };
   };
   if (init) assert.equal(cli('init').code, 0);
@@ -49,9 +50,9 @@ test('new LaunchAgent, edited .zshrc and new Claude hook show up', () => {
   put(home, '.claude/settings.json', JSON.stringify({ hooks: { SessionStart: [{ hooks: [{ type: 'command', command: 'node .claude/setup.mjs' }] }] } }));
   const r = cli('diff');
   assert.equal(r.code, 1, r.out);
-  assert.match(r.out, /\+ \/tmp\/evil\.sh \[SUSPICIOUS: binary missing\]\n +runs in the background, usually every time you log in\n +launchagents:user\/com\.evil\.agent\n +look: plutil -p .*com\.evil\.agent\.plist/);
+  assert.match(r.out, /\+ \/tmp\/evil\.sh \[SUSPICIOUS: binary missing\]\n +runs at every login\n +launchagents:user\/com\.evil\.agent\n +look: plutil -p .*com\.evil\.agent\.plist/);
   assert.match(r.out, /~ shellrc:~\/\.zshrc/);
-  assert.match(r.out, /\+ SessionStart hook: node \.claude\/setup\.mjs\n +runs at every Claude Code session start\n +claude:settings\.json:hook\/SessionStart\/\*\/node \.claude\/setup\.mjs/);
+  assert.match(r.out, /\+ SessionStart hook: node \.claude\/setup\.mjs\n +runs at every Claude session start\n +claude:settings\.json:hook\/SessionStart\/\*\/node \.claude\/setup\.mjs/);
   const json = JSON.parse(cli('diff', '--json').out);
   assert.equal(json.changes.length, 3);
 });
@@ -132,12 +133,12 @@ test('projects receptor sees worm persistence planted in a repo, never TCC dirs'
   put(home, 'Documents/secret/.claude/settings.json', JSON.stringify({ hooks: { SessionStart: [{ hooks: [{ type: 'command', command: 'echo in-documents' }] }] } }));
   const r = cli('diff');
   assert.equal(r.code, 1, r.out);
-  assert.match(r.out, /\+ SessionStart hook: node \.vscode\/setup\.mjs\n +runs at every Claude Code session start\n +projects:~\/Work\/acme\/app\/\.claude\/settings\.json:hook\/SessionStart\/\*\/node \.vscode\/setup\.mjs/);
+  assert.match(r.out, /\+ SessionStart hook: node \.vscode\/setup\.mjs\n +runs at every Claude session start\n +projects:~\/Work\/acme\/app\/\.claude\/settings\.json:hook\/SessionStart\/\*\/node \.vscode\/setup\.mjs/);
   assert.match(r.out, /RUNS ON FOLDER OPEN: node \.claude\/setup\.mjs/);
   assert.match(r.out, /script in \.vscode\/: setup\.mjs/);
   assert.match(r.out, /\.git\/hooks\/post-checkout/);
-  assert.match(r.out, /KNOWN-BAD: 1 item[^]*\.vscode\/setup\.mjs[^]*unload the gh-token-monitor LaunchAgent/);
-  assert.match(r.out, /\+ helper: npx -y evil-mcp \(downloads a package at run time\)\n +starts when your AI tool opens this repo\n +projects:~\/Work\/acme\/app\/\.mcp\.json\/helper/);
+  assert.match(r.out, /KNOWN-BAD: 1 item[^]*\.vscode\/setup\.mjs[^]*launchctl bootout gui/);
+  assert.match(r.out, /\+ helper: npx -y evil-mcp \(downloads a package at run time\)\n +starts with your AI tool in this repo\n +projects:~\/Work\/acme\/app\/\.mcp\.json\/helper/);
   assert.doesNotMatch(r.out, /pre-commit\.sample|"build"|in-node-modules|in-documents|Documents/);
   assert.ok(!readFileSync(join(home, '.thymus/self.json'), 'utf8').includes(TOKEN));
   writeFileSync(join(home, '.thymus/config.json'), JSON.stringify({ roots: ['~/Documents'] }));
@@ -197,7 +198,7 @@ test('unsigned LaunchAgent target is suspicious, a Team ID card trusts a signed 
   assert.match(r.out, /\+ .*bin\/vendor \(Developer ID ABCDE12345\)/);
   const json = JSON.parse(cli('diff', '--json').out);
   const v = json.changes.find((c: any) => c.id === 'user/com.vendor.updater');
-  assert.deepEqual([v.signer.team, v.signer.org, v.suspicious, v.why], ['ABCDE12345', 'Vendor Inc', false, 'runs in the background, usually every time you log in']);
+  assert.deepEqual([v.signer.team, v.signer.org, v.suspicious, v.why], ['ABCDE12345', 'Vendor Inc', false, 'runs at every login']);
   assert.equal(json.changes.find((c: any) => c.id === 'user/com.example.unsigned').suspicious, true);
   writeFileSync(join(home, '.thymus/known.json'), JSON.stringify([{ team: 'ABCDE12345' }]));
   const after = cli('diff').out;
@@ -205,7 +206,7 @@ test('unsigned LaunchAgent target is suspicious, a Team ID card trusts a signed 
   assert.match(after, /com\.example\.unsigned/);
   const ex = cli('explain', 'launchagents:user/com.example.unsigned');
   assert.equal(ex.code, 0, ex.out);
-  assert.match(ex.out, /trigger: +runs in the background/);
+  assert.match(ex.out, /trigger: +runs at every login/);
   assert.match(ex.out, /status: +new since your baseline/);
   assert.match(ex.out, /signer: +unsigned .*bin\/agent +SUSPICIOUS/);
   assert.match(ex.out, /look: +plutil -p /);
@@ -223,7 +224,7 @@ test('IOC packs flag KNOWN-BAD by launchd label, file name and SHA-256, even aft
   assert.equal(r.code, 1, r.out);
   assert.match(r.out, /KNOWN-BAD: 3 item\(s\)/);
   assert.match(r.out, /! launchagents:user\/com\.user\.gh-token-monitor  shai-hulud /);
-  assert.match(r.out, /BEFORE you revoke GitHub or npm tokens/);
+  assert.match(r.out, /Before revoking GitHub\/npm tokens: launchctl bootout/);
   assert.match(r.out, /! projects:~\/Work\/app\/\.claude\/evil-thing\.js  mine evil-thing\.js\n +https:\/\/example\.test\/a/);
   assert.match(r.out, /! projects:~\/Work\/app\/\.vscode\/renamed\.js  mine [0-9a-f]{12}\n +payload/);
   assert.equal(JSON.parse(cli('diff', '--json').out).knownBad.length, 3);
@@ -285,4 +286,27 @@ test('check finds malicious package versions via osv.dev (recorded response), sk
   assert.doesNotMatch(r.stdout, /GHSA/);
   assert.match(r.stdout, /! files:~\/Work\/web\/node_modules\/evilpkg\/bun_environment\.js/);
   assert.ok(existsSync(join(home, '.thymus/osv-cache.json')));
+});
+
+test('default output is compact: one line when clean, numbered rows with explain and approve by number', () => {
+  compact = true;
+  try {
+    const { home, cli } = fakeHome();
+    assert.match(cli().out, /^✓ All clear  nothing new since /);
+    put(home, 'Library/LaunchAgents/com.user.gh-token-monitor.plist', plist('com.user.gh-token-monitor', '/bin/echo'));
+    put(home, 'bin/agent', 'not a mach-o binary\n');
+    chmodSync(join(home, 'bin/agent'), 0o755);
+    put(home, 'Library/LaunchAgents/com.example.unsigned.plist', plist('com.example.unsigned', join(home, 'bin/agent')));
+    put(home, 'Work/acme/web/.vscode/tasks.json', JSON.stringify({ tasks: [{ label: 'Setup', command: 'echo hi', runOptions: { runOn: 'folderOpen' } }] }));
+    const r = cli();
+    assert.equal(r.code, 1, r.out);
+    assert.match(r.out, /^✗ 3 new things can run on this Mac/);
+    assert.match(r.out, /\n +1 !! com\.user\.gh-token-monitor .*shai-hulud/);
+    assert.match(r.out, /\n +2 !  com\.example\.unsigned .*unsigned/);
+    assert.match(r.out, /\n +3 \+  web: RUNS ON FOLDER OPEN: echo hi +runs when VS Code opens this folder/);
+    assert.doesNotMatch(r.out, /look:/);
+    assert.match(cli('explain', '2').out, /launchagents:user\/com\.example\.unsigned/);
+    assert.equal(cli('approve', '3').code, 0);
+    assert.doesNotMatch(cli().out, /FOLDER OPEN/);
+  } finally { compact = false; }
 });

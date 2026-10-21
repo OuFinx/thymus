@@ -174,8 +174,8 @@ function infected(snap: Snap, iocs: Ioc[]): Hit[] {
 }
 
 const WHY: [RegExp, string][] = [
-  [/^launchagents:daemon\//, 'runs as root, usually from boot'],
-  [/^launchagents:/, 'runs in the background, usually every time you log in'],
+  [/^launchagents:daemon\//, 'runs as root from boot'],
+  [/^launchagents:/, 'runs at every login'],
   [/^crontab:/, 'runs on a timer'],
   [/^shellrc:/, 'runs every time you open a terminal'],
   [/^ssh:SHA256:/, 'lets the owner of this key log in to your Mac'],
@@ -183,16 +183,16 @@ const WHY: [RegExp, string][] = [
   [/^browsers:/, 'runs inside your browser and can read the pages you visit'],
   [/^git:/, 'runs during everyday git commands'],
   [/^editors:/, 'runs inside your editor'],
-  [/^(claude|projects):.*hook\/SessionStart\//, 'runs at every Claude Code session start'],
+  [/^(claude|projects):.*hook\/SessionStart\//, 'runs at every Claude session start'],
   [/^claude:.*plugin\//, 'adds code to every Claude Code session'],
   [/^claude:/, 'runs during Claude Code sessions'],
   [/^(mcp|codex):/, 'starts together with your AI tool'],
   [/^npmrc:/, 'changes what npm installs and how it runs scripts'],
-  [/^projects:.*folderOpen/, 'runs when you open this folder in VS Code'],
+  [/^projects:.*folderOpen/, 'runs when VS Code opens this folder'],
   [/^projects:.*\.git\/hooks\//, 'runs during git commands in this repo'],
   [/^projects:.*hook\//, 'runs during AI agent sessions in this repo'],
-  [/^projects:.*(mcp\.json|\.gemini\/settings\.json)\//, 'starts when your AI tool opens this repo'],
-  [/^projects:/, 'runs when you open or work in this repo'],
+  [/^projects:.*(mcp\.json|\.gemini\/settings\.json)\//, 'starts with your AI tool in this repo'],
+  [/^projects:/, 'runs when you work in this repo'],
   [/^hammerspoon:/, 'runs when Hammerspoon starts, usually at login'],
   [/^menubar:/, 'runs over and over while the menu bar app is open'],
   [/^terminal:/, 'runs every time you open a terminal window'],
@@ -217,6 +217,39 @@ const tilde = (p: string) => p.startsWith(homedir() + '/') && quote(p) === p ? '
 const look = (p: string) => `${p.endsWith('.plist') ? 'plutil -p' : existsSync(p) && statSync(p).isDirectory() ? 'ls -la' : 'cat'} ${tilde(p)}`;
 const signTag = (s?: Signer) => !s ? '' : risky(s) ? ' ' + paint('1;31', `[SUSPICIOUS: ${signText(s)}]`) : paint('2', ` (${signText(s)})`);
 const hitJson = (h: Hit) => ({ receptor: h.receptor, id: h.item.id, path: h.item.path, ioc: h.ioc });
+const verbose = process.argv.includes('-v') || process.argv.includes('--verbose') || !!process.env.THYMUS_VERBOSE;
+const key = (r: string, i: Item) => `${r}:${i.id}`;
+const clip = (s: string, n: number) => s.length > n ? s.slice(0, n - 1) + '…' : s;
+
+// One numbered row per thing that needs a look: known attacks first, then suspicious signers, then the rest. `explain 2` and `approve 2` use the same order.
+type Row = { receptor: string; item: Item; change?: Change['change']; hit?: Hit };
+function rows(changes: Change[], hits: Hit[]): Row[] {
+  const out: Row[] = changes.filter((c) => c.change !== 'removed').map((c) => ({ ...c, hit: hits.find((h) => key(h.receptor, h.item) === key(c.receptor, c.item)) }));
+  for (const h of hits) if (!out.some((r) => r.hit === h)) out.push({ receptor: h.receptor, item: h.item, hit: h });
+  const rank = (r: Row) => r.hit ? 0 : risky(r.item.signer) ? 1 : 2;
+  return out.sort((a, b) => rank(a) - rank(b) || a.receptor.localeCompare(b.receptor));
+}
+
+async function pending() {
+  const self = readJson(SELF, {});
+  const { snap, errors } = await snapshot();
+  const changes = compare(self.receptors ?? {}, snap, errors, readJson(KNOWN, []));
+  const hits = infected(snap, antibodies());
+  return { self, errors, changes, hits, list: rows(changes, hits) };
+}
+
+function printRows(list: Row[]) {
+  list.forEach((r, n) => {
+    const s = r.item.signer, bad = !!r.hit || risky(s);
+    const proj = r.receptor === 'projects' ? r.item.id.match(/^(.*?)\/\.(claude|vscode|mcp\.json|git|cursor|gemini)\b/)?.[1] : undefined;
+    const name = r.receptor === 'launchagents' ? r.item.id.split('/').pop()! : r.item.label.replaceAll(homedir(), '~');
+    const what = clip((proj ? basename(proj) + ': ' : '') + name, 46).padEnd(46);
+    const tag = r.hit ? r.hit.ioc.pack : risky(s) ? signText(s!) : '';
+    const mark = r.hit ? '!!' : bad ? '! ' : r.change === 'changed' ? '~ ' : '+ ';
+    console.log(`  ${String(n + 1).padStart(2)} ${paint(bad ? '1;31' : '1;33', `${mark} ${what}`)} ${paint('2', why(r.receptor, r.item))}${tag ? '  ' + paint('1;31', tag) : ''}`);
+  });
+  for (const a of new Set(list.map((r) => r.hit?.ioc.advice).filter(Boolean))) console.log('\n' + paint('1;33', `  ⚠ ${a}`));
+}
 
 function printBad(hits: Hit[]) {
   if (!hits.length) return;
@@ -239,9 +272,8 @@ async function main() {
   if (cmd === 'explain') return explain(args[0]);
   if (cmd === 'approve') {
     if (!existsSync(SELF)) return fail(`no baseline at ${SELF}, run: thymus init`);
-    const self = readJson(SELF, {});
-    const { snap, errors } = await snapshot();
-    return approve(self, compare(self.receptors, snap, errors, readJson(KNOWN, [])), args);
+    const { self, changes, list } = await pending();
+    return approve(self, changes, args.map((a) => /^\d+$/.test(a) && list[Number(a) - 1] ? key(list[Number(a) - 1].receptor, list[Number(a) - 1].item) : a));
   }
   if (cmd === 'list') {
     const self = readJson(SELF, null);
@@ -275,6 +307,14 @@ async function init(args: string[]) {
   const isKnown = known(readJson(KNOWN, []));
   const signed = all.filter((x) => x.item.signer), sus = signed.filter((x) => risky(x.item.signer) && !isKnown(x.receptor, x.item));
   const hits = infected(snap, antibodies());
+  if (!verbose) {
+    console.log(`${paint('1;32', '✓ Learned this Mac')}  ${paint('2', `${all.length} things that can run automatically`)}`);
+    if (hits.length) { console.log(''); printRows(rows([], hits)); console.log(''); }
+    if (sus.length) console.log(`  ${paint('1;33', `${sus.length} look odd`)}  ${paint('2', 'thymus list --suspicious')}`);
+    printErrors(errors);
+    console.log(paint('2', '  Run thymus again any time to see only what changed.'));
+    return hits.length ? 1 : 0;
+  }
   printBad(hits);
   console.log(paint('1', `thymus: learned ${all.length} items from ${Object.keys(snap).length} receptors into ${SELF}`));
   console.log('  ' + Object.entries(snap).map(([r, i]) => [r, Object.keys(i).length] as const).filter(([, n]) => n).sort((a, b) => b[1] - a[1]).map(([r, n]) => `${r} ${n}`).join(', '));
@@ -299,9 +339,22 @@ async function diff(args: string[]) {
     console.log(JSON.stringify({ knownBad: hits.map(hitJson), changes: changes.map((c) => ({ receptor: c.receptor, change: c.change, ...c.item, why: why(c.receptor, c.item), suspicious: risky(c.item.signer) })), errors }, null, 2));
     return code;
   }
-  printBad(hits);
   const count = (k: string) => changes.filter((c) => c.change === k).length;
-  console.log(paint('1', `thymus: ${count('new')} new, ${count('changed')} changed, ${count('removed')} removed since ${new Date(self.updated).toLocaleString('sv').slice(0, 16)}`));
+  const since = new Date(self.updated).toLocaleString('sv').slice(0, 16);
+  if (!verbose) {
+    const list = rows(changes, hits);
+    if (!list.length) console.log(`${paint('1;32', '✓ All clear')}  ${paint('2', `nothing new since ${since}${count('removed') ? `, ${count('removed')} removed` : ''}`)}`);
+    else {
+      console.log(`${paint('1;31', `✗ ${list.length} new thing${list.length > 1 ? 's' : ''} can run on this Mac`)}  ${paint('2', `since ${since}`)}\n`);
+      printRows(list);
+      console.log('\n' + paint('2', '  thymus explain <n>  what is it?     thymus approve <n> | --all  it is mine'));
+    }
+    printErrors(errors);
+    if (code && args.includes('--notify')) spawnSync('osascript', ['-e', `display notification "${hits.length ? `${hits.length} known attack, ` : ''}${alarming.length} new or changed. Run: thymus" with title "Thymus" sound name "Basso"`]);
+    return code;
+  }
+  printBad(hits);
+  console.log(paint('1', `thymus: ${count('new')} new, ${count('changed')} changed, ${count('removed')} removed since ${since}`));
   let last = '';
   for (const c of [...changes].sort((a, b) => a.receptor.localeCompare(b.receptor))) {
     if (c.receptor !== last) console.log(`\n${paint('1;4', last = c.receptor)}`);
@@ -364,7 +417,12 @@ async function check(args: string[]) {
 }
 
 async function explain(q?: string) {
-  if (!q) return fail('usage: thymus explain <receptor:id>');
+  if (!q) return fail('usage: thymus explain <n> | <receptor:id>');
+  if (/^\d+$/.test(q)) {
+    const r = (await pending()).list[Number(q) - 1];
+    if (!r) return fail(`no item ${q} in the current list, run: thymus`);
+    q = key(r.receptor, r.item);
+  }
   const { snap } = await snapshot();
   const find = (s: Snap) => Object.entries(s ?? {}).flatMap(([receptor, items]) => Object.values(items).filter((i) => q === `${receptor}:${i.id}` || q === i.id).map((item) => ({ receptor, item })))[0];
   const cur = find(snap), old = find(readJson(SELF, {}).receptors), x = cur ?? old;

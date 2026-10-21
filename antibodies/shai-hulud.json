@@ -1,7 +1,7 @@
 {
   "name": "shai-hulud",
   "description": "Shai-Hulud npm worm family (Sep 2025 bundle.js wave, Nov 2025 Second Coming, 2026 Mini Shai-Hulud TanStack and keyv/ChainDrop waves): file names, SHA-256 hashes and launchd labels from vendor and government advisories",
-  "advice": "If this is Shai-Hulud: unload the gh-token-monitor LaunchAgent (launchctl bootout gui/$(id -u)/com.user.gh-token-monitor) BEFORE you revoke GitHub or npm tokens. Revoking first is reported to trigger rm -rf ~/ (Wiz, JFrog, Intrudify).",
+  "advice": "Before revoking GitHub/npm tokens: launchctl bootout gui/$(id -u)/com.user.gh-token-monitor (or it may wipe ~)",
   "iocs": [
     {"file":"bun_environment.js","note":"Shai-Hulud 2.0 main payload (over 10 MB, obfuscated)","url":"https://unit42.paloaltonetworks.com/npm-supply-chain-attack/"},
     {"file":"setup_bun.js","note":"Shai-Hulud 2.0 preinstall loader that installs Bun and runs bun_environment.js","url":"https://unit42.paloaltonetworks.com/npm-supply-chain-attack/"},
