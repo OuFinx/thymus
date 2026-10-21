@@ -10,7 +10,7 @@ Places where code can get itself executed on a developer's Mac without anyone ru
 | Launch Daemons | `/Library/LaunchDaemons` | [MITRE T1543.004](https://attack.mitre.org/techniques/T1543/004/) | launchagents |
 | Plist modification of existing jobs | any launchd plist | [MITRE T1547.011](https://attack.mitre.org/techniques/T1547/011/) | launchagents (content hash) |
 | Cron | `crontab -l` | [MITRE T1053.003](https://attack.mitre.org/techniques/T1053/003/) | crontab |
-| Periodic scripts | `/etc/periodic/*`, `/usr/local/etc/periodic`, `/etc/periodic.conf*` | [Objective-See, Art of Mac Malware ch. 2](https://nostarch.com/download/samples/501942c02_samplechapter.pdf) | periodic |
+| Periodic scripts | `/etc/periodic/*`, `/usr/local/etc/periodic`, `/etc/periodic.conf*` | [Objective-See, Art of Mac Malware ch. 2](https://nostarch.com/download/samples/501942c02_samplechapter.pdf) | - (periodic(8) is gone in macOS 26) |
 | Shell startup files | `~/.zshrc`, `~/.zshenv`, `~/.zprofile`, `~/.bashrc`, `~/.bash_profile`, `~/.profile`, fish config, `/etc/zshrc` etc. | [MITRE T1546.004](https://attack.mitre.org/techniques/T1546/004/) | shellrc |
 | SSH authorized keys, `~/.ssh/rc`, `~/.ssh/config` (ProxyCommand, LocalCommand) | `~/.ssh` | [MITRE T1098.004](https://attack.mitre.org/techniques/T1098/004/) | ssh |
 | Browser extensions | Chrome, Brave, Arc, Edge, Chromium, Vivaldi profiles | [MITRE T1176](https://attack.mitre.org/techniques/T1176/) | browsers |
