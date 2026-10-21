@@ -1,10 +1,31 @@
 {
   "name": "thymus",
   "version": "0.1.0",
-  "description": "Self/non-self drift detector for persistence and dev-tool autorun surfaces on macOS",
+  "description": "Your Mac's immune system: shows what can run on this Mac today that could not run yesterday",
   "type": "module",
-  "bin": { "thymus": "bin/thymus" },
-  "engines": { "node": ">=23.6" },
-  "scripts": { "test": "node --test" },
-  "license": "MIT"
+  "bin": {
+    "thymus": "bin/thymus"
+  },
+  "engines": {
+    "node": ">=23.6"
+  },
+  "scripts": {
+    "test": "node --test"
+  },
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/OuFinx/thymus.git"
+  },
+  "keywords": [
+    "macos",
+    "security",
+    "supply-chain",
+    "npm",
+    "shai-hulud",
+    "claude-code",
+    "mcp",
+    "launchagents",
+    "persistence"
+  ]
 }

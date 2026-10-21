@@ -1,74 +1,50 @@
 # Thymus
 
+**`npm uninstall` removed the package. It did not remove what the package left behind.**
+
+Thymus remembers everything on your Mac that can run by itself, and tells you the moment something new shows up.
+
 A normal day:
 
 ![thymus on a clean Mac: one line, all clear](demo/clean.gif)
 
-After installing a package that plants Mini Shai-Hulud persistence:
+The day a dependency turns out to be a worm:
 
 ![thymus after a simulated Mini Shai-Hulud infection: six numbered findings](demo/infected.gif)
 
-Learns what "self" looks like on your Mac (every place code can quietly get itself run) and tells you only what is new since then.
+## Why
 
-The thymus is the organ that teaches the immune system to tell self from non-self. 2025-2026 npm worms (Shai-Hulud and successors) persist through Claude Code hooks, VS Code tasks, MCP configs, git hooks and LaunchAgents, and `npm uninstall` removes none of it. Thymus does not know what malware looks like. It knows what your machine looked like yesterday.
+The 2025-2026 npm worms (Shai-Hulud, Mini Shai-Hulud, the TanStack and keyv waves) do not stay in `node_modules`. They plant a Claude Code `SessionStart` hook, a VS Code task that runs when you open the folder, an MCP server, a LaunchAgent. Uninstalling the package leaves all of it in place, and your AI agent happily runs it next session.
 
-## 30-second quickstart
+Antivirus asks "does this look like known malware?". Thymus asks a simpler question: **what can run on this Mac today that could not run yesterday?** The thymus is the organ that teaches the immune system to tell self from non-self.
 
-Needs Node 23.6+ (runs TypeScript directly), no dependencies.
+- **One command.** `thymus` learns your Mac on the first run and shows only what changed after that. One green line when all is fine.
+- **18 receptors**: LaunchAgents and Daemons, Claude Code hooks, MCP servers (Claude, Cursor, VS Code, Gemini, Codex), VS Code `folderOpen` tasks and scripts dropped into `.claude/` and `.vscode/` of every repo, git hooks, shell startup files, ssh, browser and editor extensions, Hammerspoon, menu bar plugins, terminal profiles and more.
+- **Who signed it.** Every program is checked with `codesign`: unsigned binaries, missing binaries and scripts in writable folders are red, Apple and trusted vendors fade out.
+- **Known-bad indicators.** A Shai-Hulud pack (file names, SHA-256, launchd labels) built from published advisories, each with its source link.
+- **`thymus check`** looks up every lockfile on your disk in the [OpenSSF malicious packages](https://github.com/ossf/malicious-packages) database via osv.dev.
+- **Read-only, zero dependencies, no daemon, no telemetry.** It never deletes or edits anything, and never stores secret values.
+- **Plugins in any language.** A receptor is any executable that prints JSON, an indicator pack is a JSON file.
+
+## Quickstart
+
+Needs macOS and Node 23.6+ (runs TypeScript directly). No dependencies.
 
 ```sh
-git clone <this repo> thymus && cd thymus
-./bin/thymus             # first run: learns your Mac into ~/.thymus/self.json and prints a short summary
-./bin/thymus             # every later run: what is new or changed? exit 1 if anything
-./bin/thymus explain launchagents:user/com.example.agent   # what is this, what runs it, who signed it
-./bin/thymus approve launchagents:user/com.example.agent   # or --all
-./bin/thymus check       # look up your packages in osv.dev for known malicious versions (network, see below)
+git clone https://github.com/OuFinx/thymus && cd thymus
+./bin/thymus                  # first run: learns this Mac into ~/.thymus
+./bin/thymus                  # later: what is new? exit code 1 if anything
+./bin/thymus explain 2        # what is item 2, what runs it, who signed it
+./bin/thymus approve 2        # it is mine (or --all)
+./bin/thymus check            # lockfiles vs known malicious package versions (network)
+./bin/thymus schedule install # run daily, notify only when something is new
 ```
 
-Other commands: `thymus init` / `thymus diff` (the same two steps by name), `thymus list [--suspicious]` (the baseline), `thymus receptors` (receptors, item counts, errors), `--json` on `diff` and `check`. Daily run with a notification: `thymus schedule install` ([docs/launchd.md](docs/launchd.md)).
+Other commands: `thymus list [--suspicious]`, `thymus receptors`, `--json` on `diff` and `check`, `-v` for the detailed view. Daily run details: [docs/launchd.md](docs/launchd.md).
 
-## Sample output
+Try it without touching your Mac: `bash`, then `source demo/demo.sh`, `thymus`, `npm install @demo/colors` (a fake npm that plants inert worm files in a throwaway HOME), `thymus`, `exit`. The GIFs are recorded that way with `vhs demo/clean.tape` and `vhs demo/infected.tape`.
 
-```
-$ thymus
-KNOWN-BAD: 1 item(s) match a published attack indicator
-  ! projects:~/Work/acme/web/.vscode/setup.mjs  shai-hulud */.vscode/setup.mjs
-      Mini Shai-Hulud / ChainDrop loader planted in repos
-      https://www.csa.gov.sg/alerts-and-advisories/advisories/ad-2026-009
-
-thymus: 3 new, 1 changed, 0 removed since 2026-10-20 10:00
-
-launchagents
-  + /Users/me/.local/share/.u/node /Users/me/.local/share/.u/index.js [SUSPICIOUS: ad-hoc signed]
-      runs at every login
-      launchagents:user/com.example.helper
-      look: plutil -p ~/Library/LaunchAgents/com.example.helper.plist
-
-projects
-  + SessionStart hook: node .vscode/setup.mjs
-      runs at every Claude session start
-      projects:~/Work/acme/web/.claude/settings.json:hook/SessionStart/*/node .vscode/setup.mjs
-      look: cat ~/Work/acme/web/.claude/settings.json
-  + script in .vscode/: setup.mjs
-      runs when you work in this repo
-      projects:~/Work/acme/web/.vscode/setup.mjs
-      look: cat ~/Work/acme/web/.vscode/setup.mjs
-
-shellrc
-  ~ shellrc:~/.zshrc
-      runs every time you open a terminal
-      look: cat ~/.zshrc
-
-Known and wanted?  thymus approve <receptor:id> ...   (or --all)
-Not sure?  run the look: command, see where it came from (ls -l@ <path>, git log -- <file>), search the label.
-Thymus never deletes anything: remove it by hand, then approve the removal.
-```
-
-`+` new, `~` changed (content hash differs), `-` removed. Removed items are shown but do not make the exit code 1. Colors only when stdout is a terminal (`NO_COLOR` turns them off).
-
-The GIFs come from `source demo/demo.sh`, then `thymus`, `npm install @demo/colors` (a fake npm), `thymus`: a throwaway fake HOME, a baseline, then a simulated infection with the published Mini Shai-Hulud file layout and inert payloads. Run them yourself, or re-record with `vhs demo/clean.tape` and `vhs demo/infected.tape`. Add `-v` to any thymus command for the detailed view.
-
-If it is Shai-Hulud: unload its LaunchAgent first (`launchctl bootout gui/$(id -u)/com.user.gh-token-monitor`), only then revoke GitHub and npm tokens. Its handler is reported to run `rm -rf ~/` when the token stops working ([Wiz](https://www.wiz.io/blog/mini-shai-hulud-strikes-again-tanstack-more-npm-packages-compromised), [JFrog](https://research.jfrog.com/post/shai-hulud-here-we-go-again/), [Intrudify](https://github.com/Intrudify/mini-shai-hulud-scanner)).
+**If it is Shai-Hulud:** unload its LaunchAgent first (`launchctl bootout gui/$(id -u)/com.user.gh-token-monitor`), only then revoke GitHub and npm tokens. Its handler is reported to run `rm -rf ~/` when the token stops working ([Wiz](https://www.wiz.io/blog/mini-shai-hulud-strikes-again-tanstack-more-npm-packages-compromised), [JFrog](https://research.jfrog.com/post/shai-hulud-here-we-go-again/), [Intrudify](https://github.com/Intrudify/mini-shai-hulud-scanner)).
 
 ## Who signed it
 
