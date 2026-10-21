@@ -1,4 +1,4 @@
-// ~/.ssh/authorized_keys (one item per key, id = SHA256 fingerprint) plus ~/.ssh/rc and ~/.ssh/config.
+// ~/.ssh/authorized_keys (one item per key, id = SHA256 fingerprint), ~/.ssh/rc, and ~/.ssh/config directives that run commands or pull in other files.
 import { readFileSync } from 'node:fs';
 import { createHash } from 'node:crypto';
 import { homedir } from 'node:os';
@@ -20,9 +20,18 @@ export default () => {
       items.push({ id: fp, label: `${parts[t]} ${parts.slice(t + 2).join(' ')}${t > 0 ? ' [with options]' : ''}`.trim(), path, hash: sha(line) });
     }
   }
-  for (const f of ['rc', 'config']) {
-    const path = join(dir, f), text = read(path);
-    if (text !== null) items.push({ id: `~/.ssh/${f}`, label: `~/.ssh/${f}`, path, hash: sha(text) });
+  const rc = join(dir, 'rc'), text = read(rc);
+  if (text !== null) items.push({ id: '~/.ssh/rc', label: '~/.ssh/rc', path: rc, hash: sha(text) });
+  const config = join(dir, 'config');
+  let host = '*';
+  for (const line of (read(config) ?? '').split('\n')) {
+    const m = line.match(/^\s*(\w+)\s*=?\s*(.*?)\s*$/);
+    if (!m) continue;
+    const key = m[1].toLowerCase();
+    if (key === 'host' || (key === 'match' && !/\bexec\b/i.test(m[2]))) host = m[2];
+    if (/^(proxycommand|localcommand|permitlocalcommand|knownhostscommand|include)$/.test(key) || (key === 'match' && /\bexec\b/i.test(m[2]))) {
+      items.push({ id: `config/${host}/${m[1]}`, label: `ssh config ${host}: ${m[1]} ${m[2]}`, path: config, hash: sha(m[2]) });
+    }
   }
   return items;
 };
