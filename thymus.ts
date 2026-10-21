@@ -117,11 +117,11 @@ async function main() {
       return alarming.length ? 1 : 0;
     }
     const count = (k: string) => changes.filter((c) => c.change === k).length;
-    console.log(`thymus: ${count('new')} new, ${count('changed')} changed, ${count('removed')} removed since ${self.updated.slice(0, 16).replace('T', ' ')}`);
+    console.log(`thymus: ${count('new')} new, ${count('changed')} changed, ${count('removed')} removed since ${new Date(self.updated).toLocaleString('sv').slice(0, 16)}`);
     let last = '';
     for (const c of [...changes].sort((a, b) => a.receptor.localeCompare(b.receptor))) {
       if (c.receptor !== last) console.log(`\n${last = c.receptor}`);
-      console.log(`  ${sign[c.change]} ${c.receptor}:${c.item.id}  ${c.item.label === c.item.id ? '' : c.item.label}`);
+      console.log(`  ${sign[c.change]} ${c.receptor}:${c.item.id}  ${c.item.label === c.item.id ? '' : c.item.label}`.trimEnd());
       if (c.item.path) console.log(`      ${c.item.path}`);
     }
     if (Object.keys(errors).length) console.log('');
@@ -137,7 +137,7 @@ async function main() {
     if (!self) return fail(`no baseline at ${SELF}, run: thymus init`);
     for (const [r, items] of Object.entries(self.receptors as Snap)) {
       console.log(`${r} (${Object.keys(items).length})`);
-      for (const i of Object.values(items)) console.log(`  ${r}:${i.id}  ${i.label === i.id ? '' : i.label}`);
+      for (const i of Object.values(items)) console.log(`  ${r}:${i.id}  ${i.label === i.id ? '' : i.label}`.trimEnd());
     }
     return 0;
   }
