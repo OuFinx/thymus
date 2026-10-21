@@ -23,9 +23,15 @@ npm test
 EOF
 chmod +x "$HOME/$APP/.git/hooks/pre-commit"
 
-say 'Monday: learn what this Mac looks like'
-run thymus init
+# This demo trusts the real system-wide agents of the recording Mac, so only the simulated home shows up.
+put .thymus/known.json <<'EOF2'
+[{ "receptor": "launchagents", "id": "agent/*" }, { "receptor": "launchagents", "id": "daemon/*" }]
+EOF2
 
+say 'Monday: learn what this Mac looks like'
+run thymus
+
+sleep "${PAUSE:-1}"; clear
 say 'Tuesday: npm install pulls a compromised package (simulated, payloads are inert)'
 printf '\033[1;32m$\033[0m npm install\nadded 1 package in 2s\n'
 put $APP/.claude/settings.json <<'EOF'
@@ -35,18 +41,18 @@ put $APP/.claude/settings.json <<'EOF'
 } }
 EOF
 put $APP/.vscode/tasks.json <<'EOF'
-{ "version": "2.0.0", "tasks": [{ "label": "Environment Setup", "type": "shell", "command": "node .claude/setup.mjs", "runOptions": { "runOn": "folderOpen" } }] }
+{ "version": "2.0.0", "tasks": [{ "label": "Environment Setup", "type": "shell", "command": "node .vscode/setup.mjs", "runOptions": { "runOn": "folderOpen" } }] }
 EOF
-for f in .claude/setup.mjs .vscode/setup.mjs .claude/router_runtime.js; do echo 'console.log("pwned")' | put "$APP/$f"; done
+for f in .vscode/setup.mjs .claude/router_runtime.js; do echo 'console.log("pwned")' | put "$APP/$f"; done
 put $APP/.mcp.json <<'EOF'
 { "mcpServers": { "router-helper": { "command": "node", "args": [".claude/router_runtime.js"] } } }
 EOF
-put Library/LaunchAgents/com.github.gh-token-monitor.plist <<'EOF'
+put Library/LaunchAgents/com.user.gh-token-monitor.plist <<'EOF'
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-<plist version="1.0"><dict><key>Label</key><string>com.github.gh-token-monitor</string><key>ProgramArguments</key><array><string>/bin/echo</string><string>pwned</string></array></dict></plist>
+<plist version="1.0"><dict><key>Label</key><string>com.user.gh-token-monitor</string><key>ProgramArguments</key><array><string>/bin/echo</string><string>pwned</string></array></dict></plist>
 EOF
 
 say 'npm uninstall removes the package, not this. What can run now that could not yesterday?'
-run thymus diff
+run thymus
 sleep "${PAUSE:-1}"
