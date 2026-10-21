@@ -1,5 +1,7 @@
 # Thymus
 
+![thymus demo: a simulated Mini Shai-Hulud infection caught by thymus diff](demo/demo.gif)
+
 Learns what "self" looks like on your Mac (every place code can quietly get itself run) and tells you only what is new since then.
 
 The thymus is the organ that teaches the immune system to tell self from non-self. 2025-2026 npm worms (Shai-Hulud and successors) persist through Claude Code hooks, VS Code tasks, MCP configs, git hooks and LaunchAgents, and `npm uninstall` removes none of it. Thymus does not know what malware looks like. It knows what your machine looked like yesterday.
@@ -21,25 +23,35 @@ Other commands: `thymus list` (the baseline), `thymus receptors` (receptors, ite
 
 ```
 $ thymus diff
-thymus: 2 new, 1 changed, 0 removed since 2026-10-20 10:00
-
-claude
-  + claude:settings.json:hook/SessionStart/*/node .claude/setup.mjs  SessionStart hook: node .claude/setup.mjs
-      /Users/me/.claude/settings.json
+thymus: 3 new, 1 changed, 0 removed since 2026-10-20 10:00
 
 launchagents
-  + launchagents:user/com.apple.updater  /Users/me/.local/share/.u/node /Users/me/.local/share/.u/index.js
-      /Users/me/Library/LaunchAgents/com.apple.updater.plist
+  + /Users/me/.local/share/.u/node /Users/me/.local/share/.u/index.js
+      launchagents:user/com.github.gh-token-monitor
+      look: plutil -p ~/Library/LaunchAgents/com.github.gh-token-monitor.plist
+
+projects
+  + SessionStart hook: node .vscode/setup.mjs
+      projects:~/Work/acme/web/.claude/settings.json:hook/SessionStart/*/node .vscode/setup.mjs
+      look: cat ~/Work/acme/web/.claude/settings.json
+  + RUNS ON FOLDER OPEN: node .claude/setup.mjs
+      projects:~/Work/acme/web/.vscode/tasks.json:folderOpen/Environment Setup
+      look: cat ~/Work/acme/web/.vscode/tasks.json
 
 shellrc
   ~ shellrc:~/.zshrc
-      /Users/me/.zshrc
+      look: cat ~/.zshrc
 
 Known and wanted?  thymus approve <receptor:id> ...   (or --all)
-Not sure?  look at the file (cat, plutil -p), check where it came from (ls -l@ <path>; mdls -n kMDItemWhereFroms <path>), search the label online. Thymus never deletes anything: remove it by hand, then approve the removal.
+Not sure?  run the look: command, see where it came from (ls -l@ <path>, git log -- <file>), search the label.
+Thymus never deletes anything: remove it by hand, then approve the removal.
 ```
 
-`+` new, `~` changed (content hash differs), `-` removed. Removed items are shown but do not make the exit code 1.
+`+` new, `~` changed (content hash differs), `-` removed. Removed items are shown but do not make the exit code 1. Colors only when stdout is a terminal (`NO_COLOR` turns them off).
+
+The GIF is `demo/demo.sh`: a throwaway fake HOME, a baseline, then a simulated infection with the published Mini Shai-Hulud file layout and inert `echo` payloads. Run it yourself, or re-record with `vhs demo/demo.tape`.
+
+If it is Shai-Hulud: disable its LaunchAgent (`gh-token-monitor`) before you revoke tokens, it is reported to wipe `~` when its token stops working ([Intrudify](https://github.com/Intrudify/mini-shai-hulud-scanner)).
 
 ## Read-only by design
 
