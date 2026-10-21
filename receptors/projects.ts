@@ -18,10 +18,10 @@ const SCRIPT = new Set(['.js', '.mjs', '.cjs', '.ts', '.sh', '.py']);
 const EXEC_SETTING = /(executablePath|interpreterPath|\.path$|\.shell\b|terminal\.integrated\.(env|profiles|automationProfile)|task\.allowAutomaticTasks|autoApprove|chat\.permissions|chat\.tools)/i;
 
 // VS Code files are JSONC: drop comments and trailing commas, leave strings alone.
-const jsonc = (s: string) => JSON.parse(s.replace(/("(?:\\.|[^"\\])*")|\/\/[^\n]*|\/\*[\s\S]*?\*\//g, '$1').replace(/,(\s*[}\]])/g, '$1'));
+export const jsonc = (s: string) => JSON.parse(s.replace(/("(?:\\.|[^"\\])*")|\/\/[^\n]*|\/\*[\s\S]*?\*\//g, '$1').replace(/,(\s*[}\]])/g, '$1'));
 const read = (p: string) => { try { return readFileSync(p, 'utf8'); } catch { return null; } };
 
-function roots() {
+export function roots() {
   const cfg = join(process.env.THYMUS_HOME || join(home, '.thymus'), 'config.json');
   const list: string[] = existsSync(cfg) ? JSON.parse(readFileSync(cfg, 'utf8')).roots ?? [] : DEFAULT_ROOTS.map((d) => join(home, d));
   const seen = new Set<string>();
@@ -93,15 +93,16 @@ function scan(dir: string, names: Set<string>, items: any[]) {
   }
 }
 
-function walk(dir: string, depth: number, items: any[]) {
+// Also used by thymus check to find lockfiles and IOC file names.
+export function walk(dir: string, visit: (dir: string, names: Set<string>) => void, depth = DEPTH) {
   let ents;
   try { ents = readdirSync(dir, { withFileTypes: true }); } catch { return; }
-  scan(dir, new Set(ents.map((e) => e.name)), items);
-  if (depth > 0) for (const e of ents) if (e.isDirectory() && !e.name.startsWith('.') && !PRUNE.has(e.name)) walk(join(dir, e.name), depth - 1, items);
+  visit(dir, new Set(ents.map((e) => e.name)));
+  if (depth > 0) for (const e of ents) if (e.isDirectory() && !e.name.startsWith('.') && !PRUNE.has(e.name)) walk(join(dir, e.name), visit, depth - 1);
 }
 
 export default () => {
   const items = [];
-  for (const r of roots()) walk(r, DEPTH, items);
+  for (const r of roots()) walk(r, (dir, names) => scan(dir, names, items));
   return items;
 };

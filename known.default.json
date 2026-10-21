@@ -11,5 +11,12 @@
   { "receptor": "editors", "id": "*/ms-python.*" },
   { "receptor": "editors", "id": "*/ms-vscode.*" },
   { "receptor": "editors", "id": "*/ms-toolsai.*" },
-  { "receptor": "editors", "id": "*/github.*" }
+  { "receptor": "editors", "id": "*/github.*" },
+  {"team": "UBF8T346G9", "vendor": "Microsoft", "source": "https://github.com/microsoft/mdatp-xplat/blob/HEAD/macos/mobileconfig/profiles/sysext.mobileconfig"},
+  {"team": "EQHXZ8M8AV", "vendor": "Google", "source": "https://github.com/google/bindiff/blob/HEAD/kokoro/macos/build.sh"},
+  {"team": "9BNSXJN65R", "vendor": "Docker", "source": "https://github.com/docker/secrets-engine/blob/HEAD/x/api/accesscontrol/requester_darwin_test.go"},
+  {"team": "W5364U7YZB", "vendor": "Tailscale", "source": "https://tailscale.com/kb/1286/macos-mdm"},
+  {"team": "VBG97UB4TA", "vendor": "Objective-See", "source": "https://github.com/objective-see/LuLu/blob/HEAD/LuLu/Shared/consts.h"},
+  {"team": "2BUA8C4S2C", "vendor": "1Password", "source": "https://github.com/1Password/install-cli-action/blob/HEAD/src/op-cli-installer/github-action/cli-installer/macos-signature.ts"},
+  {"team": "BQR82RBBHL", "vendor": "Slack", "source": "https://github.com/slackapi/slack-cli/blob/HEAD/.circleci/runner/src/scripts/mac/code-sign.sh"}
 ]

@@ -26,7 +26,7 @@ export function serverItems(tool: string, path: string, key: string) {
   }
   for (const [name, cfg] of Object.entries(servers)) {
     const label = cfg.url ?? [cfg.command, ...(cfg.args ?? [])].filter(Boolean).join(' ');
-    items.push({ id: `${tool}/${name}`, label: `${name}: ${label}`, path, hash: sha(JSON.stringify(cfg)) });
+    items.push({ id: `${tool}/${name}`, label: `${name}: ${label}`, path, hash: sha(JSON.stringify(cfg)), ...(cfg.command ? { exec: [cfg.command, ...(cfg.args ?? [])] } : {}) });
   }
   return items;
 }
