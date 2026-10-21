@@ -97,6 +97,9 @@ Pin the `label` (what the job runs) whenever you can: an id alone is easy to imi
 | mcp | MCP servers in Claude Code, Claude Desktop, Cursor, Windsurf, VS Code, Gemini CLI |
 | codex | Codex `config.toml` MCP servers and `notify` |
 | npmrc | `~/.npmrc` keys (secret values hidden) |
+| projects | inside your repos: `.claude/settings*.json` hooks, `.vscode/tasks.json` folderOpen tasks, scripts dropped in `.claude/` or `.vscode/`, `.mcp.json` and other project MCP configs, `.cursor/hooks.json`, exec-capable `.vscode/settings.json` keys, `.git/hooks` |
+
+The projects receptor walks `~/Work`, `~/Projects`, `~/code`, `~/src`, `~/dev`, `~/Developer`, `~/repos`, `~/git`, `~/GitHub` (whichever exist, 5 levels deep, skipping `node_modules`, `vendor`, build dirs). It never touches `~/Documents`, `~/Desktop`, `~/Downloads` or `~/Library` unless you ask, since macOS would show a privacy prompt. Your own roots: `~/.thymus/config.json` with `{"roots": ["~/Documents/code"]}`.
 
 Full list of known persistence surfaces with sources, including what is not covered yet: [docs/surfaces.md](docs/surfaces.md).
 

@@ -15,20 +15,20 @@ const sources: [string, string, string][] = [
   ['gemini', join(h, '.gemini/settings.json'), 'mcpServers'],
 ];
 
-export default () => {
+// Also used by the projects receptor for <repo>/.mcp.json and friends.
+export function serverItems(tool: string, path: string, key: string) {
   const items = [];
-  for (const [tool, path, key] of sources) {
-    let raw: string;
-    try { raw = readFileSync(path, 'utf8'); } catch { continue; }
-    let servers: Record<string, any>;
-    try { servers = JSON.parse(raw)[key] ?? {}; } catch {
-      items.push({ id: `${tool}/(unparsed)`, label: `${tool}: file is not plain JSON, tracking whole file`, path, hash: sha(raw) });
-      continue;
-    }
-    for (const [name, cfg] of Object.entries(servers)) {
-      const label = cfg.url ?? [cfg.command, ...(cfg.args ?? [])].filter(Boolean).join(' ');
-      items.push({ id: `${tool}/${name}`, label: `${name}: ${label}`, path, hash: sha(JSON.stringify(cfg)) });
-    }
+  let raw: string;
+  try { raw = readFileSync(path, 'utf8'); } catch { return items; }
+  let servers: Record<string, any>;
+  try { servers = JSON.parse(raw)[key] ?? {}; } catch {
+    return [{ id: `${tool}/(unparsed)`, label: `${tool}: file is not plain JSON, tracking whole file`, path, hash: sha(raw) }];
+  }
+  for (const [name, cfg] of Object.entries(servers)) {
+    const label = cfg.url ?? [cfg.command, ...(cfg.args ?? [])].filter(Boolean).join(' ');
+    items.push({ id: `${tool}/${name}`, label: `${name}: ${label}`, path, hash: sha(JSON.stringify(cfg)) });
   }
   return items;
-};
+}
+
+export default () => sources.flatMap(([tool, path, key]) => serverItems(tool, path, key));
