@@ -15,7 +15,7 @@ git clone <this repo> thymus && cd thymus
 ./bin/thymus approve launchagents:user/com.example.agent   # or --all
 ```
 
-Other commands: `thymus list` (the baseline), `thymus receptors` (receptors, item counts, errors), `thymus diff --json`. To run it daily with a notification see [docs/launchd.md](docs/launchd.md).
+Other commands: `thymus list` (the baseline), `thymus receptors` (receptors, item counts, errors), `thymus diff --json`. Daily run with a notification: `thymus schedule install` ([docs/launchd.md](docs/launchd.md)).
 
 ## Sample output
 

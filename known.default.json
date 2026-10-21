@@ -1,4 +1,5 @@
 [
+  { "receptor": "launchagents", "id": "user/dev.thymus.daily", "label": "*/bin/thymus diff --notify" },
   { "receptor": "launchagents", "id": "*/com.docker.*", "label": "*docker*" },
   { "receptor": "launchagents", "id": "*/com.google.keystone.*", "label": "*Google*" },
   { "receptor": "launchagents", "id": "*/com.google.GoogleUpdater.*", "label": "*Google*" },

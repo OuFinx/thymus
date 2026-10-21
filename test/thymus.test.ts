@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
-import { chmodSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync, appendFileSync } from 'node:fs';
+import { chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync, appendFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -46,9 +46,9 @@ test('new LaunchAgent, edited .zshrc and new Claude hook show up', () => {
   put(home, '.claude/settings.json', JSON.stringify({ hooks: { SessionStart: [{ hooks: [{ type: 'command', command: 'node .claude/setup.mjs' }] }] } }));
   const r = cli('diff');
   assert.equal(r.code, 1, r.out);
-  assert.match(r.out, /\+ launchagents:user\/com\.evil\.agent {2}\/tmp\/evil\.sh/);
+  assert.match(r.out, /\+ \/tmp\/evil\.sh\n +launchagents:user\/com\.evil\.agent\n +look: plutil -p .*com\.evil\.agent\.plist/);
   assert.match(r.out, /~ shellrc:~\/\.zshrc/);
-  assert.match(r.out, /\+ claude:settings\.json:hook\/SessionStart\/\*\/node \.claude\/setup\.mjs/);
+  assert.match(r.out, /\+ SessionStart hook: node \.claude\/setup\.mjs\n +claude:settings\.json:hook\/SessionStart\/\*\/node \.claude\/setup\.mjs/);
   const json = JSON.parse(cli('diff', '--json').out);
   assert.equal(json.changes.length, 3);
 });
@@ -72,7 +72,7 @@ test('removed items are listed but do not fail the run', () => {
   spawnSync('rm', [join(home, 'Library/LaunchAgents/com.example.ok.plist')]);
   const r = cli('diff');
   assert.equal(r.code, 1, 'zshrc changed');
-  assert.match(r.out, /- launchagents:user\/com\.example\.ok/);
+  assert.match(r.out, /- \/usr\/bin\/true\n +launchagents:user\/com\.example\.ok/);
 });
 
 test('known.json pre-approves matching items', () => {
@@ -103,7 +103,7 @@ test('user receptor in bash is picked up', () => {
   const { home, cli } = fakeHome();
   put(home, '.thymus/receptors/hello.sh', '#!/bin/sh\necho \'[{"id":"one","label":"hello","hash":"x"}]\'\n');
   chmodSync(join(home, '.thymus/receptors/hello.sh'), 0o755);
-  assert.match(cli('diff').out, /\+ hello:one {2}hello/);
+  assert.match(cli('diff').out, /\+ hello\n +hello:one/);
 });
 
 test('.npmrc token value never reaches self.json', () => {
@@ -129,13 +129,33 @@ test('projects receptor sees worm persistence planted in a repo, never TCC dirs'
   put(home, 'Documents/secret/.claude/settings.json', JSON.stringify({ hooks: { SessionStart: [{ hooks: [{ type: 'command', command: 'echo in-documents' }] }] } }));
   const r = cli('diff');
   assert.equal(r.code, 1, r.out);
-  assert.match(r.out, /\+ projects:~\/Work\/acme\/app\/\.claude\/settings\.json:hook\/SessionStart\/\*\/node \.vscode\/setup\.mjs/);
+  assert.match(r.out, /\+ SessionStart hook: node \.vscode\/setup\.mjs\n +projects:~\/Work\/acme\/app\/\.claude\/settings\.json:hook\/SessionStart\/\*\/node \.vscode\/setup\.mjs/);
   assert.match(r.out, /RUNS ON FOLDER OPEN: node \.claude\/setup\.mjs/);
   assert.match(r.out, /script in \.vscode\/: setup\.mjs/);
   assert.match(r.out, /\.git\/hooks\/post-checkout/);
-  assert.match(r.out, /\.mcp\.json\/helper {2}helper: npx -y evil-mcp/);
+  assert.match(r.out, /\+ helper: npx -y evil-mcp\n +projects:~\/Work\/acme\/app\/\.mcp\.json\/helper/);
   assert.doesNotMatch(r.out, /pre-commit\.sample|"build"|in-node-modules|in-documents|Documents/);
   assert.ok(!readFileSync(join(home, '.thymus/self.json'), 'utf8').includes(TOKEN));
   writeFileSync(join(home, '.thymus/config.json'), JSON.stringify({ roots: ['~/Documents'] }));
   assert.match(cli('diff').out, /in-documents/);
+});
+
+test('schedule install writes a valid LaunchAgent that does not flag itself, uninstall removes only it', () => {
+  const { home, cli } = fakeHome();
+  put(home, 'Library/LaunchAgents/other.plist', plist('other', '/usr/bin/true'));
+  assert.equal(cli('approve', '--all').code, 0);
+  const r = cli('schedule', 'install');
+  assert.equal(r.code, 0, r.out);
+  assert.match(r.out, /launchd was not touched/);
+  const file = join(home, 'Library/LaunchAgents/dev.thymus.daily.plist');
+  assert.equal(spawnSync('plutil', ['-lint', file]).status, 0);
+  const p = JSON.parse(spawnSync('plutil', ['-convert', 'json', '-o', '-', file], { encoding: 'utf8' }).stdout);
+  assert.deepEqual(p.ProgramArguments.slice(-2), ['diff', '--notify']);
+  assert.equal(p.EnvironmentVariables.THYMUS_HOME, join(home, '.thymus'));
+  assert.equal(p.RunAtLoad, true);
+  assert.equal(cli('diff').code, 0, 'own agent is pre-approved');
+  assert.match(cli('schedule', 'status').out, /dev\.thymus\.daily\.plist/);
+  cli('schedule', 'uninstall');
+  assert.ok(!existsSync(file));
+  assert.ok(existsSync(join(home, 'Library/LaunchAgents/other.plist')));
 });
