@@ -95,7 +95,8 @@ const tty = process.stdout.isTTY && !process.env.NO_COLOR;
 const paint = (code: string, s: string) => tty ? `\x1b[${code}m${s}\x1b[0m` : s;
 const color = { new: '1;31', changed: '1;33', removed: '32' };
 const quote = (p: string) => /[^\w@%+=:,./~-]/.test(p) ? `'${p.replace(/'/g, `'\\''`)}'` : p;
-const look = (p: string) => `${p.endsWith('.plist') ? 'plutil -p' : existsSync(p) && statSync(p).isDirectory() ? 'ls -la' : 'cat'} ${quote(p)}`;
+const tilde = (p: string) => p.startsWith(homedir() + '/') && quote(p) === p ? '~' + p.slice(homedir().length) : quote(p);
+const look = (p: string) => `${p.endsWith('.plist') ? 'plutil -p' : existsSync(p) && statSync(p).isDirectory() ? 'ls -la' : 'cat'} ${tilde(p)}`;
 
 async function main() {
   const [cmd, ...args] = process.argv.slice(2);
@@ -135,7 +136,8 @@ async function main() {
     printErrors(errors);
     if (alarming.length) {
       console.log('\nKnown and wanted?  thymus approve <receptor:id> ...   (or --all)');
-      console.log('Not sure?  run the look: command, check where it came from (ls -l@ <path>, git log -- <file>), search the label online. Thymus never deletes anything: remove it by hand, then approve the removal.');
+      console.log('Not sure?  run the look: command, see where it came from (ls -l@ <path>, git log -- <file>), search the label.');
+      console.log('Thymus never deletes anything: remove it by hand, then approve the removal.');
       if (args.includes('--notify')) spawnSync('osascript', ['-e', `display notification "${alarming.length} new or changed. Run: thymus diff" with title "Thymus" sound name "Basso"`]);
     }
     return alarming.length ? 1 : 0;
