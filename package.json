@@ -1,0 +1,10 @@
+{
+  "name": "thymus",
+  "version": "0.1.0",
+  "description": "Self/non-self drift detector for persistence and dev-tool autorun surfaces on macOS",
+  "type": "module",
+  "bin": { "thymus": "bin/thymus" },
+  "engines": { "node": ">=23.6" },
+  "scripts": { "test": "node --test" },
+  "license": "MIT"
+}

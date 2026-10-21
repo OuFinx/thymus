@@ -1,0 +1,14 @@
+[
+  { "receptor": "launchagents", "id": "*/com.docker.*", "label": "*docker*" },
+  { "receptor": "launchagents", "id": "*/com.google.keystone.*", "label": "*Google*" },
+  { "receptor": "launchagents", "id": "*/com.google.GoogleUpdater.*", "label": "*Google*" },
+  { "receptor": "launchagents", "id": "*/com.microsoft.*", "label": "*Microsoft*" },
+  { "receptor": "launchagents", "id": "*/us.zoom.*", "label": "*zoom*" },
+  { "receptor": "launchagents", "id": "*/org.mozilla.*", "label": "*Mozilla*" },
+  { "receptor": "launchagents", "id": "*/com.objective-see.*", "label": "*Objective-See*" },
+  { "receptor": "launchagents", "id": "user/homebrew.mxcl.*", "label": "/opt/homebrew/*" },
+  { "receptor": "editors", "id": "*/ms-python.*" },
+  { "receptor": "editors", "id": "*/ms-vscode.*" },
+  { "receptor": "editors", "id": "*/ms-toolsai.*" },
+  { "receptor": "editors", "id": "*/github.*" }
+]
